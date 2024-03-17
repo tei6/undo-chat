@@ -1,0 +1,67 @@
+[tool.poetry]
+name = "terminal_copilot"
+version = "0.1.0"
+description = ""
+authors = ["Kazuki INABA"]
+license = "MIT"
+packages = [
+    { include = "terminal_copilot" }
+]
+readme="README.md"
+repository="https://github.com/tei6/terminal_copilot"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+requests = "*"
+backoff = "*"
+pyquery = "^2"
+requests-toolbelt = "^1"
+more_itertools = "*"
+pyyaml = "*"
+openai = "^1.10"
+prompt_toolkit = "^3.0.43"
+argparse = "^1.4.0"
+rich = "^13.7.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7"
+# pytest-xdist = "*"
+# pytest-cov = "*"
+
+
+[tool.poetry.group.linter.dependencies]
+ruff = "^0.2"
+mypy = "^1"
+pylint = "^3"
+# types-requests = "*"
+
+[tool.poetry.group.documentation.dependencies]
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+ipython = "*"
+ipykernel = "^6.29.3"
+
+
+[tool.poetry.scripts]
+terminal_copilot = "terminal_copilot.main:main"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 150
+
+[tool.ruff.lint]
+ignore = []
+
+select = [
+    "ALL"
+]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+
