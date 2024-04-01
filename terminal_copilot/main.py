@@ -5,7 +5,11 @@ from pathlib import Path
 from openai import OpenAI
 from terminal_copilot.completer import OpenAIQuestionCompleter
 from terminal_copilot.chat import AbstractChatQuerier, OpenAIChatQuerier
-from terminal_copilot.prompt import AbstractPrompt, PromptToolkitPrompt
+from terminal_copilot.prompt import (
+    AbstractPrompt,
+    PromptToolkitPrompt,
+    AbstractStateProvider,
+)
 from terminal_copilot.printer import AbstractResultPrinter, SimplePrinter
 from terminal_copilot.history import AbstractHistoryManager, FileHistoryManager
 from terminal_copilot.message_util import MessageCreator
@@ -20,20 +24,41 @@ def chat(
     printer: AbstractResultPrinter,
     history_manager: AbstractHistoryManager,
 ):
-    histories = history_manager.read()
     while True:
         try:
             text = prompt.prompt("> ")
-            history_manager.append_history(MessageCreator.user(text))
-            histories = querier.query(text, histories)
-            message = histories[-1]
+            history_manager.append(MessageCreator.user(text))
+            message = querier.query(text)
             printer.print(message["content"])
-            history_manager.append_history(MessageCreator.assistant(message["content"]))
+            history_manager.append(MessageCreator.assistant(message["content"]))
 
         except KeyboardInterrupt:
             continue
         except EOFError:
             break
+
+
+class LastQAStateProvider(AbstractStateProvider):
+    def __init__(self, history_manager: AbstractHistoryManager) -> None:
+        self.history_manager = history_manager
+        self._answer = None
+        self._prompt = None
+
+    def pre_action(self) -> None:
+        message = self.history_manager.undo()
+        message_dict = message.message
+        self._prompt = message_dict["content"]
+        message = self.history_manager.undo()
+        message_dict = message.message
+        self._answer = message_dict["content"]
+
+        return None
+
+    def answer(self) -> str:
+        return self._answer
+
+    def prompt(self) -> str:
+        return self._prompt
 
 
 def parse_args():
@@ -49,15 +74,19 @@ def parse_args():
 def main():
     args = parse_args()
 
-    message_id = args.message_id
-    history_manager = FileHistoryManager(Path("~/chat_history"), message_id)
+    # message_id = args.message_id
+    history_manager = FileHistoryManager(Path("~/chat_history"))
 
     client = OpenAI()
-    querier = OpenAIChatQuerier(client)
+    querier = OpenAIChatQuerier(client, history_manager=history_manager)
     completer = OpenAIQuestionCompleter(client)
-    prompt = PromptToolkitPrompt(completer)
+    state_provider = LastQAStateProvider(history_manager)
+    prompt = PromptToolkitPrompt(completer, state_provider=state_provider)
     printer = SimplePrinter()
-    chat(prompt, querier, printer, history_manager)
+
+    chat(
+        prompt=prompt, querier=querier, printer=printer, history_manager=history_manager
+    )
 
 
 if __name__ == "__main__":
