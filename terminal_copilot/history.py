@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 import json
@@ -5,17 +6,48 @@ from typing import Optional
 import copy
 import uuid
 import datetime
+import copy
+
+
+class AbstractHistoryMessage(ABC):
+    @abstractmethod
+    def message(self) -> dict:
+        pass
+
+    @abstractmethod
+    def parent(self) -> AbstractHistoryMessage:
+        pass
+
+    @abstractmethod
+    def children(self) -> list[AbstractHistoryMessage]:
+        pass
 
 
 class AbstractHistoryManager(ABC):
     @abstractmethod
-    def read(self, message_id: str):
+    def current_message(self) -> AbstractHistoryMessage:
         pass
 
     @abstractmethod
-    def append_history(self, message: dict[str, str]):
+    def get_messages(self) -> list[dict]:
+        pass
+
+    @abstractmethod
+    def read(self) -> list[AbstractHistoryMessage]:
+        pass
+
+    @abstractmethod
+    def append(self, message: dict[str, str]):
         """
+        Add history to the current conversation.
         message: a dictionary containing 'role' and 'content'
+        """
+        pass
+
+    @abstractmethod
+    def undo(self) -> AbstractHistoryMessage | None:
+        """
+        Go back one level in the history."
         """
         pass
 
@@ -32,54 +64,78 @@ class AbstractHistoryManager(ABC):
         return _message
 
 
+class FileHistoryMessage(AbstractHistoryMessage):
+    def __init__(self, message: dict, parent=None):
+        self._message = message
+        self._parent = parent
+        self._children: list[FileHistoryMessage] = []
+
+    @property
+    def message(self) -> dict:
+        return self._message
+
+    @property
+    def parent(self) -> Optional[FileHistoryMessage]:
+        return self._parent
+
+    def set_parent(self, parent: FileHistoryMessage):
+        self._parent = parent
+
+    @property
+    def children(self) -> list[FileHistoryMessage]:
+        return copy.copy(self._children)
+
+    def add_child(self, child: FileHistoryMessage):
+        self._children.append(child)
+
+
 class FileHistoryManager(AbstractHistoryManager):
-    def __init__(self, history_dir: Path, message_id: str | None = None):
+    def __init__(self, history_dir: Path):
         history_dir = history_dir.expanduser()
         history_dir.mkdir(parents=True, exist_ok=True)
         self.filepath = history_dir / "history.jsonl"
+        self.histories = []
+        self.current: FileHistoryMessage | None = None
 
-        histories = []
-        if message_id is not None and self.filepath.exists():
-            with open(self.filepath, "r") as file:
-                for line in file:
-                    data = json.loads(line)
-                    histories.append(data)
-            # It may be better not to filter anything related to message_id here
-            histories = self._trace_history(message_id, histories, [])
-        self.histories = sorted(histories, key=lambda x: x["updated_at"])
+    def current_message(self) -> FileHistoryMessage:
+        return self.current
 
-    def _find_history(
-        self, message_id: str, histories: list[dict[str, dict]]
-    ) -> Optional[dict]:
-        for history in histories:
-            if history["message_id"] == message_id:
-                return history
+    def get_messages(self) -> list[dict]:
+        history = self.current_message()
+        if history is None:
+            return []
 
-    def _trace_history(
-        self, message_id: str, histories: dict[str, dict], history_chain: list
-    ):
-        current_history = self._find_history(message_id, histories)
-        if current_history:
-            history_chain.append(current_history)
-            if current_history["parent_message_id"]:
-                self._trace_history(
-                    current_history["parent_message_id"], histories, history_chain
-                )
-        return history_chain
+        messages = [history.message]
+        while (history := history.parent) is not None:
+            message = history.message
+            messages.append(message)
 
-    def read(self):
-        return [
-            {"role": history["role"], "content": history["content"]}
-            for history in self.histories
-        ]
+        return messages[::-1]
 
-    def append_history(self, message: dict[str, str]):
+    def read(self) -> list[FileHistoryMessage]:
+        raise NotImplementedError()
+
+    def undo(self) -> FileHistoryMessage | None:
+        if self.current:
+            self.current = self.current.parent
+            return self.current
+        else:
+            return None
+
+    def append(self, message: dict[str, str]):
         _message = self._to_history(
             message,
             self.histories[-1]["message_id"] if len(self.histories) >= 1 else None,
         )
+        self.histories.append(_message)
+        if self.current is None:
+            self.current = FileHistoryMessage(message=_message)
+        else:
+            new_message = FileHistoryMessage(message=_message, parent=self.current)
+            self.current.add_child(new_message)
+            new_message.set_parent(self.current)
+            self.current = new_message
+
         with open(self.filepath, "a") as file:
             json_str = json.dumps(_message, ensure_ascii=False)
             file.write(json_str + "\n")
-
-        self.histories.append(_message)

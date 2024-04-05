@@ -1,11 +1,12 @@
 from openai import OpenAI
 from terminal_copilot.message_util import MessageCreator
+from terminal_copilot.history import AbstractHistoryManager
 from abc import ABC, abstractmethod
 
 
 class AbstractChatQuerier(ABC):
     @abstractmethod
-    def query(self, message: str, histories: list[dict[str, str]]) -> str:
+    def query(self, message: str) -> str:
         """
         histories: example: [{"role": "user", "content": "hello"}]
         """
@@ -13,22 +14,24 @@ class AbstractChatQuerier(ABC):
 
 
 class OpenAIChatQuerier(AbstractChatQuerier):
-    def __init__(self, client: OpenAI, model="gpt-3.5-turbo"):
+    def __init__(
+        self,
+        client: OpenAI,
+        model="gpt-3.5-turbo",
+        history_manager: AbstractHistoryManager = None,
+    ):
         self.client = client
         self.model = model
+        self.history_manager = history_manager
 
     @staticmethod
     def _from_chat_message(message: dict[str, str]):
         # Currently, it just returns the message as it is
-        return message
+        return {"role": message["role"], "content": message["content"]}
 
-    @staticmethod
-    def _to_chat_message(message: dict[str, str]):
-        # Currently, it just returns the message as it is
-        return message
-
-    def query(self, message, histories) -> str:
-        _messages = histories + [MessageCreator.user(message)]
+    def query(self, message) -> str:
+        messages = self.history_manager.get_messages()
+        _messages = messages + [MessageCreator.user(message)]
         messages = [self._from_chat_message(m) for m in _messages]
 
         res = self.client.chat.completions.create(
@@ -36,7 +39,4 @@ class OpenAIChatQuerier(AbstractChatQuerier):
             messages=messages,
             stream=False,
         )
-        common_messages = [self._to_chat_message(m) for m in messages]
-        return common_messages + [
-            MessageCreator.assistant(res.choices[0].message.content)
-        ]
+        return MessageCreator.assistant(res.choices[0].message.content)
