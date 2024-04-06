@@ -3,16 +3,16 @@ import argparse
 
 from pathlib import Path
 from openai import OpenAI
-from terminal_copilot.completer import OpenAIQuestionCompleter
-from terminal_copilot.chat import AbstractChatQuerier, OpenAIChatQuerier
-from terminal_copilot.prompt import (
+from undo_chat.completer import OpenAIQuestionCompleter
+from undo_chat.chat import AbstractChatQuerier, OpenAIChatQuerier
+from undo_chat.prompt import (
     AbstractPrompt,
     PromptToolkitPrompt,
     AbstractStateProvider,
 )
-from terminal_copilot.printer import AbstractResultPrinter, SimplePrinter
-from terminal_copilot.history import AbstractHistoryManager, FileHistoryManager
-from terminal_copilot.message_util import MessageCreator
+from undo_chat.printer import AbstractResultPrinter, SimplePrinter
+from undo_chat.history import AbstractHistoryManager, FileHistoryManager
+from undo_chat.message_util import MessageCreator
 
 logging.basicConfig(level=logging.INFO, filename="terminal_copilot.log")
 logger = logging.getLogger(__name__)

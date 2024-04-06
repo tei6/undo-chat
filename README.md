@@ -1,4 +1,4 @@
 # Undo Chat
 
 ## Overview
-This is a sample implementation of a chat interface using the OpenAI API.
+This is an LLM chat interface that allows you to undo conversations.

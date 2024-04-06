@@ -1,6 +1,6 @@
 from openai import OpenAI
-from terminal_copilot.message_util import MessageCreator
-from terminal_copilot.history import AbstractHistoryManager
+from undo_chat.message_util import MessageCreator
+from undo_chat.history import AbstractHistoryManager
 from abc import ABC, abstractmethod
 
 
