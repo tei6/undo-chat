@@ -1,14 +1,14 @@
 [tool.poetry]
-name = "terminal_copilot"
+name = "undo-chat"
 version = "0.1.0"
 description = ""
 authors = ["Kazuki INABA"]
 license = "MIT"
 packages = [
-    { include = "terminal_copilot" }
+    { include = "undo_chat" }
 ]
 readme="README.md"
-repository="https://github.com/tei6/terminal_copilot"
+repository="https://github.com/tei6/undo_chat"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -46,7 +46,7 @@ ipykernel = "^6.29.3"
 
 
 [tool.poetry.scripts]
-terminal_copilot = "terminal_copilot.main:main"
+undo-chat = "undo_chat.main:main"
 
 [tool.mypy]
 ignore_missing_imports = true

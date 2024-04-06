@@ -3,7 +3,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.key_binding import KeyBindings
-from terminal_copilot.completer import MessageCompleter
+from undo_chat.completer import MessageCompleter
 
 
 class AbstractStateProvider(ABC):
