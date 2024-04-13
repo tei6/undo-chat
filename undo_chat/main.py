@@ -3,7 +3,6 @@ import argparse
 
 from pathlib import Path
 from openai import OpenAI
-from undo_chat.completer import OpenAIQuestionCompleter
 from undo_chat.chat import AbstractChatQuerier, OpenAIChatQuerier
 from undo_chat.prompt import (
     AbstractPrompt,
@@ -12,9 +11,9 @@ from undo_chat.prompt import (
 )
 from undo_chat.printer import AbstractResultPrinter, SimplePrinter
 from undo_chat.history import AbstractHistoryManager, FileHistoryManager
-from undo_chat.message_util import MessageCreator
+from undo_chat.chat_message import ChatMessage
 
-logging.basicConfig(level=logging.INFO, filename="terminal_copilot.log")
+logging.basicConfig(level=logging.INFO, filename="undo_tree.log")
 logger = logging.getLogger(__name__)
 
 
@@ -26,11 +25,12 @@ def chat(
 ):
     while True:
         try:
+            past_messages = history_manager.get_messages()
             text = prompt.prompt("> ")
-            history_manager.append(MessageCreator.user(text))
-            message = querier.query(text)
-            printer.print(message["content"])
-            history_manager.append(MessageCreator.assistant(message["content"]))
+            history_manager.append(ChatMessage.user(text))
+            message = querier.query(text, past_messages)
+            printer.print(message.content)
+            history_manager.append(message)
 
         except KeyboardInterrupt:
             continue
@@ -41,47 +41,37 @@ def chat(
 class LastQAStateProvider(AbstractStateProvider):
     def __init__(self, history_manager: AbstractHistoryManager) -> None:
         self.history_manager = history_manager
-        self._answer = None
-        self._prompt = None
+        self._answer: str | None = None
+        self._prompt: str | None = None
 
     def pre_action(self) -> None:
         message = self.history_manager.undo()
-        message_dict = message.message
-        self._prompt = message_dict["content"]
+        self._prompt = message.get_message().content if message is not None else ""
         message = self.history_manager.undo()
-        message_dict = message.message
-        self._answer = message_dict["content"]
+        self._answer = message.get_message().content if message is not None else ""
 
         return None
 
-    def answer(self) -> str:
+    def answer(self) -> str | None:
         return self._answer
 
-    def prompt(self) -> str:
+    def prompt(self) -> str | None:
         return self._prompt
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Terminal Copilot")
-    parser.add_argument(
-        "--message-id",
-        type=str,
-        help="The message ID to start the conversation from",
-    )
+    parser = argparse.ArgumentParser(description="Undo Chat")
     return parser.parse_args()
 
 
 def main():
-    args = parse_args()
+    _ = parse_args()
 
-    # message_id = args.message_id
     history_manager = FileHistoryManager(Path("~/chat_history"))
 
     client = OpenAI()
-    querier = OpenAIChatQuerier(client, history_manager=history_manager)
-    completer = OpenAIQuestionCompleter(client)
-    state_provider = LastQAStateProvider(history_manager)
-    prompt = PromptToolkitPrompt(completer, state_provider=state_provider)
+    querier = OpenAIChatQuerier(client)
+    prompt = PromptToolkitPrompt(state_provider=LastQAStateProvider(history_manager))
     printer = SimplePrinter()
 
     chat(
