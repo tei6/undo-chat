@@ -8,15 +8,15 @@ from undo_chat.completer import MessageCompleter
 
 class AbstractStateProvider(ABC):
     @abstractmethod
-    def pre_action(self) -> str:
+    def pre_action(self) -> None:
         pass
 
     @abstractmethod
-    def answer(self) -> str:
+    def answer(self) -> str | None:
         pass
 
     @abstractmethod
-    def prompt(self) -> str:
+    def prompt(self) -> str | None:
         pass
 
 
@@ -41,11 +41,11 @@ class PromptToolkitPromptCompleter(Completer):
 class PromptToolkitPrompt(AbstractPrompt):
     def __init__(
         self,
-        completer: MessageCompleter = None,
-        state_provider: AbstractStateProvider = None,
+        completer: MessageCompleter | None = None,
+        state_provider: AbstractStateProvider | None = None,
     ):
         if completer is None:
-            self.session = PromptSession()
+            self.session: PromptSession = PromptSession()
         else:
             self.session = PromptSession(
                 completer=PromptToolkitPromptCompleter(completer)
