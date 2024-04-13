@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "poetry"
+    directory: "/" 
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    commit-message:
+      prefix: "deps: "
+      include: "scope"
