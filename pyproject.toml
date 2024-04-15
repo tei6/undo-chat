@@ -30,7 +30,7 @@ pytest = "^8"
 
 
 [tool.poetry.group.linter.dependencies]
-ruff = "^0.2"
+ruff = "^0.3"
 mypy = "^1"
 pylint = "^3"
 # types-requests = "*"
