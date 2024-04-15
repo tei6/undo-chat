@@ -8,5 +8,5 @@ updates:
       - dependency-type: "direct"
       - dependency-type: "indirect"
     commit-message:
-      prefix: "deps: "
+      prefix: ""
       include: "scope"
