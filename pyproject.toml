@@ -42,7 +42,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 ipython = "*"
-ipykernel = "^6.29.3"
+ipykernel = "^6.29.5"
 
 
 [tool.poetry.scripts]
